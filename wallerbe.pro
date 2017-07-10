@@ -9,9 +9,11 @@ win32:!win32-g++: PRE_TARGETDEPS += $$PWD/3rdparty/LibOVR/Lib/Windows/x64/Releas
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    renderthread.cpp
 
 FORMS +=
 
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    renderthread.h
