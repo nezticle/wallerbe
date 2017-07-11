@@ -10,11 +10,12 @@
 class QOffscreenSurface;
 class QMutex;
 class Renderer;
+class QOpenGLFunctions_4_5_Core;
 
 class RenderThread : public QThread
 {
 public:
-    RenderThread(ovrSession session, QSurface *surface, QObject *parent = nullptr);
+    RenderThread(QSurface *surface, QObject *parent = nullptr);
     ~RenderThread();
     void stop();
 
@@ -39,6 +40,12 @@ private:
 
     QVector<FramebufferObject> m_framebufferObjects;
     Renderer *m_renderer;
+    QOpenGLFunctions_4_5_Core* m_gl;
+
+    ovrEyeRenderDesc m_eyeRenderDesc[2];
+    ovrVector3f m_hmdToEyeViewOffset[2];
+    ovrHmdDesc m_hmdDesc;
+    ovrLayerEyeFov m_layer;
 };
 
 #endif // RENDERTHREAD_H

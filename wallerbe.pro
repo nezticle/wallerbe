@@ -1,11 +1,13 @@
 QT += widgets
 
-win32: LIBS += -L$$PWD/3rdparty/LibOVR/Lib/Windows/x64/Release/VS2015/ -lLibOVR
+release:!debug:win32: LIBS += -L$$PWD/3rdparty/LibOVR/Lib/Windows/x64/Release/VS2015/ -lLibOVR
+debug:win32: LIBS += -L$$PWD/3rdparty/LibOVR/Lib/Windows/x64/Debug/VS2015/ -lLibOVR
 
 INCLUDEPATH += $$PWD/3rdparty/LibOVR/Include
 DEPENDPATH += $$PWD/3rdparty/LibOVR/Include
 
-win32:!win32-g++: PRE_TARGETDEPS += $$PWD/3rdparty/LibOVR/Lib/Windows/x64/Release/VS2015/LibOVR.lib
+release:!debug:win32:!win32-g++: PRE_TARGETDEPS += $$PWD/3rdparty/LibOVR/Lib/Windows/x64/Release/VS2015/LibOVR.lib
+debug:win32:!win32-g++: PRE_TARGETDEPS += $$PWD/3rdparty/LibOVR/Lib/Windows/x64/Debug/VS2015/LibOVR.lib
 
 SOURCES += \
     main.cpp \
