@@ -12,7 +12,6 @@ class MainWindow;
 }
 
 class QOffscreenSurface;
-class QOpenGLContext;
 class RenderThread;
 
 class MainWindow : public QMainWindow
@@ -32,10 +31,8 @@ private slots:
 private:
     QTimer m_timer;
     ovrSession m_session;
-    ovrTextureSwapChain m_textureSwapChain;
-    QOpenGLContext *m_glContext;
-    QOffscreenSurface *m_offscreenSurface;
     RenderThread *m_renderThread;
+    QOffscreenSurface *m_offscreenSurface;
 };
 
 #endif // MAINWINDOW_H
