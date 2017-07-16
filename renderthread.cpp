@@ -1,5 +1,5 @@
-#include "renderthread.h"
 #include "renderer.h"
+#include "renderthread.h"
 
 #include <QtGui/QOffscreenSurface>
 #include <QtGui/QOpenGLContext>
