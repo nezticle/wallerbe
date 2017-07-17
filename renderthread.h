@@ -7,7 +7,7 @@
 #include <OVR_CAPI_GL.h>
 #include <QtGui/QOpenGLContext>
 
-class QOffscreenSurface;
+class QWindow;
 class QMutex;
 class Renderer;
 class QOpenGLFunctions_4_5_Core;
@@ -15,7 +15,7 @@ class QOpenGLFunctions_4_5_Core;
 class RenderThread : public QThread
 {
 public:
-    RenderThread(QSurface *surface, QObject *parent = nullptr);
+    RenderThread(QWindow *surface, QObject *parent = nullptr);
     ~RenderThread();
     void stop();
 
@@ -31,7 +31,7 @@ private:
     ovrSession m_session;
     ovrTextureSwapChain m_textureSwapChain;
     QOpenGLContext *m_glContext;
-    QSurface *m_surface;
+    QWindow *m_surface;
     struct FramebufferObject {
         GLuint fbo;
         GLuint depthStencilBuffer;

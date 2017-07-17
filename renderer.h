@@ -4,11 +4,14 @@
 #include <QObject>
 #include <Ogre.h>
 
+class QOpenGLContext;
+class QWindow;
+
 class Renderer : public QObject
 {
     Q_OBJECT
 public:
-    explicit Renderer(QObject *parent = nullptr);
+    explicit Renderer(QWindow *surface, QOpenGLContext *glContext, QObject *parent = nullptr);
 
     void render();
 
@@ -23,7 +26,10 @@ private:
         right = 1
     };
 
+    QWindow *m_offscreenSurface;
+    QOpenGLContext *m_glContext;
     Ogre::Root *m_root;
+    Ogre::RenderWindow *m_renderWindow;
     Ogre::SceneManager *m_sceneManager;
     Ogre::Camera *m_cameras[2];
     Ogre::CompositorWorkspace *m_workspace;

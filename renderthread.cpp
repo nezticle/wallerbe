@@ -1,7 +1,7 @@
 #include "renderer.h"
 #include "renderthread.h"
 
-#include <QtGui/QOffscreenSurface>
+#include <QtGui/QWindow>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QSurfaceFormat>
 #include <QtCore/QMutex>
@@ -12,7 +12,7 @@
 
 
 
-RenderThread::RenderThread(QSurface *surface, QObject *parent)
+RenderThread::RenderThread(QWindow *surface, QObject *parent)
     : QThread(parent)
     , m_surface(surface)
     , m_isActive(false)
@@ -50,7 +50,7 @@ void RenderThread::run()
         ovr_CalcEyePoses(hmdState.HeadPose.ThePose, m_hmdToEyeViewOffset, m_layer.RenderPose);
 
         // Visual Block
-        if (isVisible) {
+        if (isVisible) {   
             m_glContext->makeCurrent(m_surface);
             // Get next available index of the texture swap chain
             int currentIndex = 0;
@@ -247,7 +247,7 @@ void RenderThread::init()
         }
     }
 
-    m_renderer = new Renderer(nullptr);
+    m_renderer = new Renderer(m_surface, m_glContext);
 
     // Setup VR Structures
     m_hmdDesc = ovr_GetHmdDesc(m_session);

@@ -11,7 +11,7 @@ namespace Ui {
 class MainWindow;
 }
 
-class QOffscreenSurface;
+class QWindow;
 class RenderThread;
 
 class MainWindow : public QMainWindow
@@ -24,7 +24,7 @@ public:
 
 private:
     RenderThread *m_renderThread;
-    QOffscreenSurface *m_offscreenSurface;
+    QWindow *m_offscreenSurface;
 };
 
 #endif // MAINWINDOW_H

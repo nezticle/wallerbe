@@ -59,6 +59,7 @@ debug:win32:!win32-g++: {
     ogre_media.files = $$PWD/3rdparty/OGRE/media
     ogre_media.path = $$OUT_PWD/debug
     COPIES += ogre_debug ogre_media
+    DEFINES += WALLERBE_DEBUG
 }
 
 OTHER_FILES += \
