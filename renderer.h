@@ -21,6 +21,7 @@ public slots:
 
 private:
     void init();
+    void loadResources();
     enum {
         left = 0,
         right = 1

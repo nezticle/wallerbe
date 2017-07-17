@@ -51,6 +51,45 @@ void Renderer::init()
     m_root->initialise(false);
     m_renderWindow = m_root->createRenderWindow("hidden window", 0, 0, false, &params);
 
-//    m_sceneManager = m_root->createSceneManager("OctreeSceneManager", "OSM_SMGR");
-//    m_sceneManager->setShadowTechnique(Ogre::ShadowTechnique::SHADOWTYPE_STENCIL_ADDITIVE);
+    loadResources();
+
+    Ogre::InstancingThreadedCullingMethod threadedCullingMethod = Ogre::INSTANCING_CULLING_SINGLETHREAD;
+    const size_t numThreads = std::max<size_t>( 1, Ogre::PlatformInformation::getNumLogicalCores() );
+    m_sceneManager = m_root->createSceneManager( Ogre::ST_GENERIC,
+                                                 numThreads,
+                                                 threadedCullingMethod,
+                                                 "SMInstance" );
+    //Set sane defaults for proper shadow mapping
+    m_sceneManager->setShadowDirectionalLightExtrusionDistance( 500.0f );
+    m_sceneManager->setShadowFarDistance( 500.0f );
+
+}
+
+void Renderer::loadResources()
+{
+    // Load resource paths from config file
+    Ogre::ConfigFile cf;
+    cf.load("resources.cfg");
+
+    // Go through all sections & settings in the file
+    Ogre::ConfigFile::SectionIterator seci = cf.getSectionIterator();
+
+    Ogre::String secName, typeName, archName;
+    while( seci.hasMoreElements() )
+    {
+        secName = seci.peekNextKey();
+        Ogre::ConfigFile::SettingsMultiMap *settings = seci.getNext();
+
+        if( secName != "Hlms" )
+        {
+            Ogre::ConfigFile::SettingsMultiMap::iterator i;
+            for (i = settings->begin(); i != settings->end(); ++i)
+            {
+                typeName = i->first;
+                archName = i->second;
+                Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
+                            archName, typeName, secName);
+            }
+        }
+    }
 }
