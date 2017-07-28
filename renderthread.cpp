@@ -4,20 +4,20 @@
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QSurfaceFormat>
-#include <QtCore/QMutex>
 #include <QtGui/QOpenGLFunctions_4_5_Core>
 #include <QtGui/QColor>
 
 #include <QtCore/QDebug>
+#include <QtCore/QMutexLocker>
 
 
-
-RenderThread::RenderThread(QWindow *surface, QObject *parent)
+RenderThread::RenderThread(QWindow *surface, QOpenGLContext *mirrorContext, QObject *parent)
     : QThread(parent)
-    , m_surface(surface)
     , m_isActive(false)
     , m_mutex(new QMutex)
     , m_textureSwapChain(nullptr)
+    , m_mirrorContext(mirrorContext)
+    , m_surface(surface)
     , m_gl(nullptr)
 {
 
@@ -25,22 +25,21 @@ RenderThread::RenderThread(QWindow *surface, QObject *parent)
 
 RenderThread::~RenderThread()
 {
-    m_mutex->lock();
     if (m_isActive)
         stop();
-    m_mutex->unlock();
-    delete m_mutex;
 }
 
 void RenderThread::run()
 {
-    init();
+    if (!init())
+        return;
+    else
+        setIsActive(true);
+
     bool isVisible = true;
     while(true) {
         // Check if active
-        m_mutex->lock();
-        bool running = m_isActive;
-        m_mutex->unlock();
+        bool running = isActive();
         if (!running)
             break;
 
@@ -107,27 +106,61 @@ void RenderThread::run()
 
 void RenderThread::stop()
 {
-    m_mutex->lock();
-    m_isActive = false;
-    m_mutex->unlock();
+    setIsActive(false);
 }
 
-void RenderThread::init()
+QOpenGLContext *RenderThread::openGLContext() const
+{
+    return m_glContext;
+}
+
+ovrSession RenderThread::session() const
+{
+    return m_session;
+}
+
+bool RenderThread::isActive() const
+{
+    QMutexLocker locker(m_mutex);
+    return m_isActive;
+}
+
+QSize RenderThread::mirrorTextureSize() const
+{
+    QMutexLocker locker(m_mutex);
+    return QSize(m_mirrorTexture.description.Width,
+                 m_mirrorTexture.description.Height);
+}
+
+unsigned int RenderThread::mirrorTextureId() const
+{
+    QMutexLocker locker(m_mutex);
+    return m_mirrorTexture.id;
+}
+
+void RenderThread::setIsActive(bool isActive)
+{
+    QMutexLocker locker(m_mutex);
+    if (m_isActive == isActive)
+        return;
+
+    m_isActive = isActive;
+    emit isActiveChanged(m_isActive);
+}
+
+bool RenderThread::init()
 {
     ovrResult result = ovr_Initialize(nullptr);
     if (OVR_FAILURE(result))
-        return;
+        return false;
 
     ovrGraphicsLuid luid;
     result = ovr_Create(&m_session, &luid);
     if (OVR_FAILURE(result)) {
         ovr_Shutdown();
-        return;
+        return false;
     }
 
-    m_mutex->lock();
-    m_isActive = true;
-    m_mutex->unlock();
     // Setup OpenGL Context
     m_glContext = new QOpenGLContext(nullptr);
 
@@ -136,11 +169,13 @@ void RenderThread::init()
     format.setMajorVersion(4);
     format.setMinorVersion(5);
     format.setProfile(QSurfaceFormat::CoreProfile);
-    format.setStereo(true);
+    //format.setStereo(true);
 
     m_glContext->setFormat(format);
+    m_glContext->setShareContext(m_mirrorContext);
     if (!m_glContext->create()) {
         qWarning("Could not create opengl context");
+        return false;
     }
 
     // Get Buffer sizes
@@ -153,8 +188,6 @@ void RenderThread::init()
     bufferSize.setWidth(recommenedTex0Size.w + recommenedTex1Size.w);
     bufferSize.setHeight(std::max( recommenedTex0Size.h, recommenedTex1Size.h));
 
-    qDebug() << bufferSize;
-
     // Create texture swapchain
     ovrTextureSwapChainDesc desc = {};
     desc.Type = ovrTexture_2D;
@@ -166,12 +199,15 @@ void RenderThread::init()
     desc.SampleCount = 1;
     desc.StaticImage = ovrFalse;
 
-    if (!m_glContext->makeCurrent(m_surface))
+    if (!m_glContext->makeCurrent(m_surface)) {
         qWarning("opengl context could not be made current");
+        return false;
+    }
 
     m_gl = m_glContext->versionFunctions<QOpenGLFunctions_4_5_Core>();
     if (!m_gl) {
         qWarning("opengl functions could not be resolved");
+        return false;
     }
 
     if (ovr_CreateTextureSwapChainGL(m_session, &desc, &m_textureSwapChain) == ovrSuccess) {
@@ -241,6 +277,7 @@ void RenderThread::init()
                     break;
                 }
                 qWarning() << "framebuffer incomplete!";
+                return false;
             } else {
                 m_framebufferObjects.append(framebuffer);
             }
@@ -267,11 +304,32 @@ void RenderThread::init()
     m_layer.Viewport[0].Size = { bufferSize.width() / 2, bufferSize.height() };
     m_layer.Viewport[1].Pos = {  bufferSize.width() / 2, 0 };
     m_layer.Viewport[1].Size = { bufferSize.width() / 2, bufferSize.height() };
+
+    // Setup mirror Texture
+    m_mutex->lock();
+    m_mirrorTexture.description.Format = OVR_FORMAT_R8G8B8A8_UNORM_SRGB;
+    m_mirrorTexture.description.Width = bufferSize.width();
+    m_mirrorTexture.description.Height = bufferSize.height();
+    m_mirrorTexture.description.MiscFlags = ovrTextureMisc_None;
+    result = ovr_CreateMirrorTextureGL(m_session, &m_mirrorTexture.description, &m_mirrorTexture.texture);
+    if (result != ovrSuccess) {
+        qWarning("failed to create mirror Texture");
+        m_mirrorTexture.id = 0;
+    } else {
+        result = ovr_GetMirrorTextureBufferGL(m_session, m_mirrorTexture.texture, &m_mirrorTexture.id);
+        if (result != ovrSuccess) {
+            qWarning("failed to get mirror Texture ID");
+            m_mirrorTexture.id = 0;
+        }
+    }
+    m_mutex->unlock();
+    return true;
 }
 
 void RenderThread::cleanup()
 {
     m_glContext->makeCurrent(m_surface);
+    ovr_DestroyMirrorTexture(m_session, m_mirrorTexture.texture);
     ovr_DestroyTextureSwapChain(m_session, m_textureSwapChain);
     // cleanup framebuffers
     m_gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);

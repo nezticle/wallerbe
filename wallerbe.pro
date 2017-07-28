@@ -71,9 +71,11 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     renderthread.cpp \
-    renderer.cpp
+    renderer.cpp \
+    mirrorrenderer.cpp
 
 HEADERS += \
     mainwindow.h \
     renderthread.h \
-    renderer.h
+    renderer.h \
+    mirrorrenderer.h

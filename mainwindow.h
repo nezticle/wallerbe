@@ -7,12 +7,9 @@
 #include <OVR_CAPI.h>
 #include <OVR_CAPI_GL.h>
 
-namespace Ui {
-class MainWindow;
-}
-
 class QWindow;
 class RenderThread;
+class MirrorRenderer;
 
 class MainWindow : public QMainWindow
 {
@@ -22,9 +19,17 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+private slots:
+    void setupMirroring(bool isActive);
+
 private:
     RenderThread *m_renderThread;
     QWindow *m_offscreenSurface;
+    QWindow *m_mirrorView;
+    QWidget *m_mirrorViewWidget;
+    QOpenGLContext *m_mirrorContext;
+    MirrorRenderer *m_mirrorRenderer;
+
 };
 
 #endif // MAINWINDOW_H
