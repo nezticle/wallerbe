@@ -55,39 +55,45 @@ void RenderThread::run()
             int currentIndex = 0;
             ovr_GetTextureSwapChainCurrentIndex(m_session, m_textureSwapChain, &currentIndex);
             auto currentFramebuffer = m_framebufferObjects[currentIndex];
+
+
+
+//            // Test render stuff
+//            const QColor color1 = QColor(Qt::red);
+//            const QColor color2 = QColor(Qt::blue);
+//            static bool flipper = true;
+//            flipper = !flipper;
+
+//            // Eye 1
+//            m_gl->glViewport(m_layer.Viewport[0].Pos.x,
+//                             m_layer.Viewport[0].Pos.y,
+//                             m_layer.Viewport[0].Size.w,
+//                             m_layer.Viewport[0].Size.h);
+//            if (flipper)
+//                m_gl->glClearColor(color1.redF(), color1.greenF(), color1.blueF(), 1.0f);
+//            else
+//                m_gl->glClearColor(color2.redF(), color2.greenF(), color2.blueF(), 1.0f);
+//            m_gl->glClear(GL_COLOR_BUFFER_BIT);
+
+//            // Eye 2
+//            m_gl->glViewport(m_layer.Viewport[1].Pos.x,
+//                             m_layer.Viewport[1].Pos.y,
+//                             m_layer.Viewport[1].Size.w,
+//                             m_layer.Viewport[1].Size.h);
+//            if (!flipper)
+//                m_gl->glClearColor(color1.redF(), color1.greenF(), color1.blueF(), 1.0f);
+//            else
+//                m_gl->glClearColor(color2.redF(), color2.greenF(), color2.blueF(), 1.0f);
+//            m_gl->glClear(GL_COLOR_BUFFER_BIT);
+
+            unsigned int glTexture = m_renderer->render(hmdState, m_eyeRenderDesc);
+
             // Set currentFBO as active render target
-            m_gl->glBindFramebuffer(GL_FRAMEBUFFER, currentFramebuffer.fbo);
-
-
-            // Test render stuff
-            const QColor color1 = QColor(Qt::red);
-            const QColor color2 = QColor(Qt::blue);
-            static bool flipper = true;
-            flipper = !flipper;
-
-            // Eye 1
-            m_gl->glViewport(m_layer.Viewport[0].Pos.x,
-                             m_layer.Viewport[0].Pos.y,
-                             m_layer.Viewport[0].Size.w,
-                             m_layer.Viewport[0].Size.h);
-            if (flipper)
-                m_gl->glClearColor(color1.redF(), color1.greenF(), color1.blueF(), 1.0f);
-            else
-                m_gl->glClearColor(color2.redF(), color2.greenF(), color2.blueF(), 1.0f);
-            m_gl->glClear(GL_COLOR_BUFFER_BIT);
-
-            // Eye 2
-            m_gl->glViewport(m_layer.Viewport[1].Pos.x,
-                             m_layer.Viewport[1].Pos.y,
-                             m_layer.Viewport[1].Size.w,
-                             m_layer.Viewport[1].Size.h);
-            if (!flipper)
-                m_gl->glClearColor(color1.redF(), color1.greenF(), color1.blueF(), 1.0f);
-            else
-                m_gl->glClearColor(color2.redF(), color2.greenF(), color2.blueF(), 1.0f);
-            m_gl->glClear(GL_COLOR_BUFFER_BIT);
-
-            m_renderer->render();
+//            m_gl->glBindFramebuffer(GL_FRAMEBUFFER, currentFramebuffer.fbo);
+            //Copy the rendered image to the Oculus Swap Texture
+            m_gl->glCopyImageSubData(glTexture, GL_TEXTURE_2D, 0, 0, 0, 0,
+                                     currentFramebuffer.texture, GL_TEXTURE_2D, 0, 0, 0, 0,
+                                     m_outputSize.width(), m_outputSize.height(), 1);
 
             // Commit the changes to the texture swapchain
             ovr_CommitTextureSwapChain(m_session, m_textureSwapChain);
@@ -184,17 +190,16 @@ bool RenderThread::init()
                                                         sessionDesc.DefaultEyeFov[0], 1.0f);
     ovrSizei recommenedTex1Size = ovr_GetFovTextureSize(m_session, ovrEye_Right,
                                                         sessionDesc.DefaultEyeFov[1], 1.0f);
-    QSize bufferSize;
-    bufferSize.setWidth(recommenedTex0Size.w + recommenedTex1Size.w);
-    bufferSize.setHeight(std::max( recommenedTex0Size.h, recommenedTex1Size.h));
+    m_outputSize.setWidth(recommenedTex0Size.w + recommenedTex1Size.w);
+    m_outputSize.setHeight(std::max( recommenedTex0Size.h, recommenedTex1Size.h));
 
     // Create texture swapchain
     ovrTextureSwapChainDesc desc = {};
     desc.Type = ovrTexture_2D;
     desc.ArraySize = 1;
     desc.Format = OVR_FORMAT_R8G8B8A8_UNORM_SRGB;
-    desc.Width = bufferSize.width();
-    desc.Height = bufferSize.height();
+    desc.Width = m_outputSize.width();
+    desc.Height = m_outputSize.height();
     desc.MipLevels = 1;
     desc.SampleCount = 1;
     desc.StaticImage = ovrFalse;
@@ -225,7 +230,7 @@ bool RenderThread::init()
             // Create depth/stencil buffer
             m_gl->glGenRenderbuffers(1, &framebuffer.depthStencilBuffer);
             m_gl->glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.depthStencilBuffer);
-            m_gl->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, bufferSize.width(), bufferSize.height());
+            m_gl->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_outputSize.width(), m_outputSize.height());
             m_gl->glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer.depthStencilBuffer);
             GLenum drawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
             m_gl->glDrawBuffers(1, drawBuffers);
@@ -284,7 +289,7 @@ bool RenderThread::init()
         }
     }
 
-    m_renderer = new Renderer(m_surface, m_glContext);
+    m_renderer = new Renderer(m_surface, m_glContext, m_outputSize);
 
     // Setup VR Structures
     m_hmdDesc = ovr_GetHmdDesc(m_session);
@@ -301,15 +306,26 @@ bool RenderThread::init()
     m_layer.Fov[0]           = m_eyeRenderDesc[0].Fov;
     m_layer.Fov[1]           = m_eyeRenderDesc[1].Fov;
     m_layer.Viewport[0].Pos = { 0, 0};
-    m_layer.Viewport[0].Size = { bufferSize.width() / 2, bufferSize.height() };
-    m_layer.Viewport[1].Pos = {  bufferSize.width() / 2, 0 };
-    m_layer.Viewport[1].Size = { bufferSize.width() / 2, bufferSize.height() };
+    m_layer.Viewport[0].Size = { m_outputSize.width() / 2, m_outputSize.height() };
+    m_layer.Viewport[1].Pos = {  m_outputSize.width() / 2, 0 };
+    m_layer.Viewport[1].Size = { m_outputSize.width() / 2, m_outputSize.height() };
+
+    // Setup projection matrices for each eye
+    ovrMatrix4f leftProjection = ovrMatrix4f_Projection(m_eyeRenderDesc[0].Fov,
+                                                        0.2f,
+                                                        1000.0f,
+                                                        true);
+    ovrMatrix4f rightProjection = ovrMatrix4f_Projection(m_eyeRenderDesc[1].Fov,
+                                                         0.2f,
+                                                         1000.0f,
+                                                         true);
+    m_renderer->setEyeMatrices(leftProjection, rightProjection);
 
     // Setup mirror Texture
     m_mutex->lock();
     m_mirrorTexture.description.Format = OVR_FORMAT_R8G8B8A8_UNORM_SRGB;
-    m_mirrorTexture.description.Width = bufferSize.width();
-    m_mirrorTexture.description.Height = bufferSize.height();
+    m_mirrorTexture.description.Width = m_outputSize.width();
+    m_mirrorTexture.description.Height = m_outputSize.height();
     m_mirrorTexture.description.MiscFlags = ovrTextureMisc_None;
     result = ovr_CreateMirrorTextureGL(m_session, &m_mirrorTexture.description, &m_mirrorTexture.texture);
     if (result != ovrSuccess) {

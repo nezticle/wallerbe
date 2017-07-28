@@ -15,15 +15,20 @@ debug:win32:!win32-g++: {
 }
 
 # OGRE SDK
-INCLUDEPATH += $$PWD/3rdparty/OGRE/include/OGRE
-DEPENDPATH += $$PWD/3rdparty/OGRE/include/OGRE
+INCLUDEPATH += \
+    $$PWD/3rdparty/OGRE/include/OGRE \
+    $$PWD/3rdparty/OGRE/include/OGRE/RenderSystems/GL3Plus/
+DEPENDPATH += \
+    $$PWD/3rdparty/OGRE/include/OGRE \
+    $$PWD/3rdparty/OGRE/include/OGRE/RenderSystems/GL3Plus/
 
 release:!debug:win32:!win32-g++: {
-    LIBS += -L$$PWD/3rdparty/OGRE/lib/Release -lOgreMain -lOgreHlmsPbs -lOgreHlmsUnlit
+    LIBS += -L$$PWD/3rdparty/OGRE/lib/Release -lOgreMain -lOgreHlmsPbs -lOgreHlmsUnlit -L$$PWD/3rdparty/OGRE/lib/Release/opt -lRenderSystem_GL3Plus
     PRE_TARGETDEPS += \
         $$PWD/3rdparty/OGRE/lib/Release/OgreMain.lib \
         $$PWD/3rdparty/OGRE/lib/Release/OgreHlmsPbs.lib \
-        $$PWD/3rdparty/OGRE/lib/Release/OgreHlmsUnlit.lib
+        $$PWD/3rdparty/OGRE/lib/Release/OgreHlmsUnlit.lib \
+        $$PWD/3rdparty/OGRE/lib/Release/opt/RenderSystem_GL3Plus.lib
 
     # Copy necessary files for release
     ogre_release.files = \
@@ -40,11 +45,12 @@ release:!debug:win32:!win32-g++: {
     COPIES += ogre_release ogre_media
 }
 debug:win32:!win32-g++: {
-    LIBS += -L$$PWD/3rdparty/OGRE/lib/Debug -lOgreMain_d -lOgreHlmsPbs_d -lOgreHlmsUnlit_d
+    LIBS += -L$$PWD/3rdparty/OGRE/lib/Debug -lOgreMain_d -lOgreHlmsPbs_d -lOgreHlmsUnlit_d -L$$PWD/3rdparty/OGRE/lib/Debug/opt -lRenderSystem_GL3Plus_d
     PRE_TARGETDEPS += \
         $$PWD/3rdparty/OGRE/lib/Debug/OgreMain_d.lib \
         $$PWD/3rdparty/OGRE/lib/Debug/OgreHlmsPbs_d.lib \
-        $$PWD/3rdparty/OGRE/lib/Debug/OgreHlmsUnlit_d.lib
+        $$PWD/3rdparty/OGRE/lib/Debug/OgreHlmsUnlit_d.lib \
+        $$PWD/3rdparty/OGRE/lib/Debug/opt/RenderSystem_GL3Plus_d.lib
 
     # Copy necessary files for debug
     ogre_debug.files = \

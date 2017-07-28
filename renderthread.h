@@ -4,6 +4,7 @@
 #include <QtCore/QThread>
 #include <QtCore/QMutex>
 #include <QtCore/QVector>
+#include <QtCore/QSize>
 #include <OVR_CAPI.h>
 #include <OVR_CAPI_GL.h>
 #include <QtGui/QOpenGLContext>
@@ -54,6 +55,7 @@ private:
         GLuint depthStencilBuffer;
         GLuint texture;
     };
+    QSize m_outputSize;
 
     QVector<FramebufferObject> m_framebufferObjects;
     Renderer *m_renderer;
