@@ -194,9 +194,15 @@ void Renderer::setupCompositor()
     renderTextureChannel[0].textures.push_back(m_renderTexturePtr);
     Ogre::ResourceLayoutMap initialTextureLayouts;
     Ogre::ResourceAccessMap initialTextureUavAccess;
+    const Ogre::IdString workspaceName( "MainWorkspace" );
+    const Ogre::ColourValue backgroundColor(0.f, 0.f, 0.f, 1.f);
+    if( !compositionManager->hasWorkspaceDefinition( workspaceName ) )
+    {
+        compositionManager->createBasicWorkspaceDef( "MainWorkspace", backgroundColor, Ogre::IdString());
+    }
 
     m_workspaces[left] = compositionManager->addWorkspace(m_sceneManager, renderTextureChannel,
-                                                          m_cameras[left], "LeftEyeWorkspace",
+                                                          m_cameras[left], workspaceName,
                                                           true, -1, (Ogre::UavBufferPackedVec*)0,
                                                           &initialTextureLayouts,
                                                           &initialTextureUavAccess,
@@ -207,7 +213,7 @@ void Renderer::setupCompositor()
     executionMask = 0x02;
     viewportOffsetScale = Ogre::Vector4(.5f, 0.f, .5f, 1.f);
     m_workspaces[right] = compositionManager->addWorkspace(m_sceneManager, renderTextureChannel,
-                                                           m_cameras[right], "RightEyeWorkspace",
+                                                           m_cameras[right], workspaceName,
                                                            true, -1, (Ogre::UavBufferPackedVec*)0,
                                                            &initialTextureLayouts,
                                                            &initialTextureUavAccess,

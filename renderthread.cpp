@@ -56,36 +56,6 @@ void RenderThread::run()
             ovr_GetTextureSwapChainCurrentIndex(m_session, m_textureSwapChain, &currentIndex);
             auto currentFramebuffer = m_framebufferObjects[currentIndex];
 
-
-
-//            // Test render stuff
-//            const QColor color1 = QColor(Qt::red);
-//            const QColor color2 = QColor(Qt::blue);
-//            static bool flipper = true;
-//            flipper = !flipper;
-
-//            // Eye 1
-//            m_gl->glViewport(m_layer.Viewport[0].Pos.x,
-//                             m_layer.Viewport[0].Pos.y,
-//                             m_layer.Viewport[0].Size.w,
-//                             m_layer.Viewport[0].Size.h);
-//            if (flipper)
-//                m_gl->glClearColor(color1.redF(), color1.greenF(), color1.blueF(), 1.0f);
-//            else
-//                m_gl->glClearColor(color2.redF(), color2.greenF(), color2.blueF(), 1.0f);
-//            m_gl->glClear(GL_COLOR_BUFFER_BIT);
-
-//            // Eye 2
-//            m_gl->glViewport(m_layer.Viewport[1].Pos.x,
-//                             m_layer.Viewport[1].Pos.y,
-//                             m_layer.Viewport[1].Size.w,
-//                             m_layer.Viewport[1].Size.h);
-//            if (!flipper)
-//                m_gl->glClearColor(color1.redF(), color1.greenF(), color1.blueF(), 1.0f);
-//            else
-//                m_gl->glClearColor(color2.redF(), color2.greenF(), color2.blueF(), 1.0f);
-//            m_gl->glClear(GL_COLOR_BUFFER_BIT);
-
             unsigned int glTexture = m_renderer->render(hmdState, m_eyeRenderDesc);
 
             // Set currentFBO as active render target
