@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "scene.h"
 
 #include <Compositor/OgreCompositorManager2.h>
 #include <RenderSystems/GL3Plus/OgreGL3PlusTextureManager.h>
@@ -15,6 +16,8 @@ Renderer::Renderer(QWindow *surface, QOpenGLContext *glContext, const QSize &siz
     , m_size(size)
 {
     init();
+    m_scene = new Scene();
+    m_scene->init(m_sceneManager, m_root);
 }
 
 unsigned int Renderer::render(const ovrTrackingState &trackingState, ovrEyeRenderDesc eyeRenderDesc[])

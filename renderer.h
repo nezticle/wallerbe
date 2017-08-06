@@ -8,8 +8,10 @@
 
 #include <QtCore/QSize>
 
+
 class QOpenGLContext;
 class QWindow;
+class Scene;
 
 class Renderer : public QObject
 {
@@ -49,6 +51,7 @@ private:
     Ogre::Real m_farClippingDistance;
     Ogre::TexturePtr m_renderTexturePtr;
     Ogre::RenderTexture* m_renderTexture;
+    Scene *m_scene;
 
     double m_currentFrameDisplayTime;
     double m_lastFrameDisplayTime;
