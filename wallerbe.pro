@@ -76,16 +76,16 @@ OTHER_FILES += \
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    renderthread.cpp \
     renderer.cpp \
     mirrorrenderer.cpp \
     scene.cpp \
-    player.cpp
+    player.cpp \
+    oculusrenderthread.cpp
 
 HEADERS += \
     mainwindow.h \
-    renderthread.h \
     renderer.h \
     mirrorrenderer.h \
     scene.h \
-    player.h
+    player.h \
+    oculusrenderthread.h

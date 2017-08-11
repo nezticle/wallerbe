@@ -1,9 +1,13 @@
 #include "renderer.h"
 #include "scene.h"
+#include "player.h"
 
 #include <Compositor/OgreCompositorManager2.h>
+#include <Compositor/OgreCompositorWorkspace.h>
 #include <RenderSystems/GL3Plus/OgreGL3PlusTextureManager.h>
 #include <RenderSystems/GL3Plus/OgreGL3PlusTexture.h>
+#include <Hlms/Pbs/OgreHlmsPbs.h>
+#include <Hlms/Unlit/OgreHlmsUnlit.h>
 
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QWindow>
@@ -15,30 +19,29 @@ Renderer::Renderer(QWindow *surface, QOpenGLContext *glContext, const QSize &siz
     , m_glContext(glContext)
     , m_size(size)
 {
+    // init loads subsystems, creates cameras, and sets up the compositor
     init();
     m_scene = new Scene();
-    m_scene->init(m_sceneManager, m_root);
+    m_scene->init(m_sceneManager, m_root, m_camerasNode, m_cameras);
 }
 
-unsigned int Renderer::render(const ovrTrackingState &trackingState, ovrEyeRenderDesc eyeRenderDesc[])
+unsigned int Renderer::render(const ovrTrackingState &trackingState, ovrEyeRenderDesc eyeRenderDesc[], qint64 timeDelta)
 {
-    auto cameraPosition = m_camerasNode->getPosition();
-    auto cameraOrientation = m_camerasNode->getOrientation();
-    ovrQuatf oculusOrient = trackingState.HeadPose.ThePose.Orientation;
-    ovrVector3f oculusPosition = trackingState.HandPoses->ThePose.Position;
-    for (int i = 0; i < 2; ++i) {
-        m_cameras[i]->setOrientation(cameraOrientation * Ogre::Quaternion(oculusOrient.w, oculusOrient.x, oculusOrient.y, oculusOrient.z));
-        m_cameras[i]->setPosition(cameraPosition // "gameplay" position
-                                  + (m_cameras[i]->getOrientation()
-                                     * Ogre::Vector3(eyeRenderDesc[i].HmdToEyeOffset.x,
-                                                     eyeRenderDesc[i].HmdToEyeOffset.y,
-                                                     eyeRenderDesc[i].HmdToEyeOffset.z)
-                                     + cameraOrientation
-                                     * Ogre::Vector3(oculusPosition.x,
-                                                     oculusPosition.y,
-                                                     oculusPosition.z)));
-    }
-    m_root->_fireFrameRenderingQueued();
+    // Update position of Head (cameras) for current tracking position
+    m_scene->player()->updateFromTracking(trackingState, eyeRenderDesc);
+
+    m_scene->update(timeDelta);
+
+    // Render
+    m_root->renderOneFrame();
+//    m_root->getRenderSystem()->_beginFrameOnce();
+//    m_root->_fireFrameRenderingQueued();
+//    m_workspaces[left]->_beginUpdate(true);
+//    m_workspaces[left]->_update();
+//    m_workspaces[left]->_endUpdate(true);
+//    m_workspaces[right]->_beginUpdate(true);
+//    m_workspaces[right]->_update();
+//    m_workspaces[right]->_endUpdate(true);
 
     Ogre::GL3PlusTexture* gltex = static_cast<Ogre::GL3PlusTexture*>(Ogre::GL3PlusTextureManager::getSingleton().getByName("RenderTarget").getPointer());
     bool isFsaa = false;
@@ -124,7 +127,9 @@ void Renderer::loadResources()
     // Go through all sections & settings in the file
     Ogre::ConfigFile::SectionIterator seci = cf.getSectionIterator();
 
-    Ogre::String secName, typeName, archName;
+    Ogre::String secName;
+    Ogre::String typeName;
+    Ogre::String archName;
     while( seci.hasMoreElements() )
     {
         secName = seci.peekNextKey();
@@ -142,6 +147,59 @@ void Renderer::loadResources()
             }
         }
     }
+
+    // High Level Material System
+    Ogre::String dataFolder = cf.getSetting( "DoNotUseAsResource", "Hlms", "" );
+    if( dataFolder.empty() )
+        dataFolder = "./";
+    else if( *(dataFolder.end() - 1) != '/' )
+        dataFolder += "/";
+
+    Ogre::RenderSystem *renderSystem = m_root->getRenderSystem();
+
+    Ogre::String shaderSyntax = "GLSL";
+    if( renderSystem->getName() == "Direct3D11 Rendering Subsystem" )
+        shaderSyntax = "HLSL";
+    else if( renderSystem->getName() == "Metal Rendering Subsystem" )
+        shaderSyntax = "Metal";
+
+    Ogre::Archive *archiveLibrary = Ogre::ArchiveManager::getSingletonPtr()->load(
+                dataFolder + "Hlms/Common/" + shaderSyntax,
+                "FileSystem", true );
+    Ogre::Archive *archiveLibraryAny = Ogre::ArchiveManager::getSingletonPtr()->load(
+                dataFolder + "Hlms/Common/Any",
+                "FileSystem", true );
+    Ogre::Archive *archivePbsLibraryAny = Ogre::ArchiveManager::getSingletonPtr()->load(
+                dataFolder + "Hlms/Pbs/Any",
+                "FileSystem", true );
+    Ogre::Archive *archiveUnlitLibraryAny = Ogre::ArchiveManager::getSingletonPtr()->load(
+                dataFolder + "Hlms/Unlit/Any",
+                "FileSystem", true );
+
+    Ogre::ArchiveVec library;
+    library.push_back( archiveLibrary );
+    library.push_back( archiveLibraryAny );
+
+    Ogre::Archive *archiveUnlit = Ogre::ArchiveManager::getSingletonPtr()->load(
+                dataFolder + "Hlms/Unlit/" + shaderSyntax,
+                "FileSystem", true );
+
+    library.push_back( archiveUnlitLibraryAny );
+    Ogre::HlmsUnlit *hlmsUnlit = nullptr;
+    hlmsUnlit = OGRE_NEW Ogre::HlmsUnlit( archiveUnlit, &library );
+    Ogre::Root::getSingleton().getHlmsManager()->registerHlms( hlmsUnlit );
+    library.pop_back();
+
+    Ogre::Archive *archivePbs = Ogre::ArchiveManager::getSingletonPtr()->load(
+                dataFolder + "Hlms/Pbs/" + shaderSyntax,
+                "FileSystem", true );
+    library.push_back( archivePbsLibraryAny );
+    Ogre::HlmsPbs *hlmsPbs = nullptr;
+    hlmsPbs = OGRE_NEW Ogre::HlmsPbs( archivePbs, &library );
+    Ogre::Root::getSingleton().getHlmsManager()->registerHlms( hlmsPbs );
+    library.pop_back();
+
+    Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups( true );
 }
 
 void Renderer::setupCameras()

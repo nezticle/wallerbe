@@ -9,17 +9,19 @@
 #include <OVR_CAPI_GL.h>
 #include <QtGui/QOpenGLContext>
 
+#include <QtGui/QOpenGLTextureBlitter>
+
 class QWindow;
 class Renderer;
 class QOpenGLFunctions_4_5_Core;
 
-class RenderThread : public QThread
+class OculusRenderThread : public QThread
 {
     Q_OBJECT
     Q_PROPERTY(bool isActive READ isActive WRITE setIsActive NOTIFY isActiveChanged)
 public:
-    RenderThread(QWindow *surface, QOpenGLContext *mirrorContext, QObject *parent = nullptr);
-    ~RenderThread();
+    OculusRenderThread(QWindow *surface, QOpenGLContext *mirrorContext, QObject *parent = nullptr);
+    ~OculusRenderThread();
     void stop();
 
     QOpenGLContext *openGLContext() const;
@@ -71,6 +73,8 @@ private:
         ovrMirrorTexture texture;
         unsigned int id;
     } m_mirrorTexture;
+
+    QOpenGLTextureBlitter *m_blitter;
 };
 
 #endif // RENDERTHREAD_H

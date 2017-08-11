@@ -19,7 +19,7 @@ class Renderer : public QObject
 public:
     explicit Renderer(QWindow *surface, QOpenGLContext *glContext, const QSize &size, QObject *parent = nullptr);
 
-    unsigned int render(const ovrTrackingState &trackingState, ovrEyeRenderDesc eyeRenderDesc[]);
+    unsigned int render(const ovrTrackingState &trackingState, ovrEyeRenderDesc eyeRenderDesc[], qint64 timeDelta);
 
     void setEyeMatrices(ovrMatrix4f left, ovrMatrix4f right);
 
@@ -40,8 +40,10 @@ private:
     Ogre::Root *m_root;
     Ogre::RenderWindow *m_renderWindow;
     Ogre::SceneManager *m_sceneManager;
+
     Ogre::SceneNode *m_camerasNode;
     Ogre::Camera *m_cameras[2];
+
     Ogre::CompositorWorkspace *m_workspaces[2];
     Ogre::String m_pluginsPath;
     Ogre::String m_writeAccessFolder;

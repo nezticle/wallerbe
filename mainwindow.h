@@ -8,7 +8,7 @@
 #include <OVR_CAPI_GL.h>
 
 class QWindow;
-class RenderThread;
+class OculusRenderThread;
 class MirrorRenderer;
 
 class MainWindow : public QMainWindow
@@ -23,7 +23,7 @@ private slots:
     void setupMirroring(bool isActive);
 
 private:
-    RenderThread *m_renderThread;
+    OculusRenderThread *m_renderThread;
     QWindow *m_offscreenSurface;
     QWindow *m_mirrorView;
     QWidget *m_mirrorViewWidget;

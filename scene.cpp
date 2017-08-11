@@ -20,7 +20,7 @@ Scene::Scene()
     // not valid unti after init is called
 }
 
-void Scene::init(Ogre::SceneManager *manager,Ogre::Root *root)
+void Scene::init(Ogre::SceneManager *manager, Ogre::Root *root, Ogre::SceneNode *headNode, Ogre::Camera *cameras[])
 {
     m_root = root;
     m_sceneManager = manager;
@@ -29,6 +29,18 @@ void Scene::init(Ogre::SceneManager *manager,Ogre::Root *root)
     const float armsLength = 2.5f;
 
     // Create player (with cameras attached to head)
+    m_player = new Player(headNode, cameras);
+
+
+//    Ogre::Item *item = m_sceneManager->createItem( "Cube_d.mesh",
+//                                                 Ogre::ResourceGroupManager::
+//                                                 AUTODETECT_RESOURCE_GROUP_NAME,
+//                                                 Ogre::SCENE_DYNAMIC );
+
+//    auto sceneNode = m_sceneManager->getRootSceneNode( Ogre::SCENE_DYNAMIC )->createChildSceneNode( Ogre::SCENE_DYNAMIC );
+
+//    sceneNode->attachObject( item );
+//    m_sceneNodes.append(sceneNode);
 
     // Create floor
 
@@ -169,10 +181,17 @@ void Scene::init(Ogre::SceneManager *manager,Ogre::Root *root)
 
     m_sceneManager->setAmbientLight( Ogre::ColourValue( 0.3f, 0.5f, 0.7f ) * 0.1f * 0.75f * 60.0f,
                                    Ogre::ColourValue( 0.6f, 0.45f, 0.3f ) * 0.065f * 0.75f * 60.0f,
-                                   -light->getDirection() + Ogre::Vector3::UNIT_Y * 0.2f );
+                                     -light->getDirection() + Ogre::Vector3::UNIT_Y * 0.2f );
 }
 
-void Scene::update(unsigned int time)
+
+
+void Scene::update(qint64 time)
 {
 
+}
+
+Player *Scene::player() const
+{
+    return m_player;
 }

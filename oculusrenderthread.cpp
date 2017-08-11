@@ -1,5 +1,5 @@
 #include "renderer.h"
-#include "renderthread.h"
+#include "oculusrenderthread.h"
 
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLContext>
@@ -10,8 +10,10 @@
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
 
+#include <QtCore/QElapsedTimer>
 
-RenderThread::RenderThread(QWindow *surface, QOpenGLContext *mirrorContext, QObject *parent)
+
+OculusRenderThread::OculusRenderThread(QWindow *surface, QOpenGLContext *mirrorContext, QObject *parent)
     : QThread(parent)
     , m_isActive(false)
     , m_mutex(new QMutex)
@@ -19,22 +21,26 @@ RenderThread::RenderThread(QWindow *surface, QOpenGLContext *mirrorContext, QObj
     , m_mirrorContext(mirrorContext)
     , m_surface(surface)
     , m_gl(nullptr)
+    , m_blitter(nullptr)
 {
 
 }
 
-RenderThread::~RenderThread()
+OculusRenderThread::~OculusRenderThread()
 {
     if (m_isActive)
         stop();
 }
 
-void RenderThread::run()
+void OculusRenderThread::run()
 {
     if (!init())
         return;
     else
         setIsActive(true);
+
+    QElapsedTimer frameTimer;
+    frameTimer.start();
 
     bool isVisible = true;
     while(true) {
@@ -56,17 +62,29 @@ void RenderThread::run()
             ovr_GetTextureSwapChainCurrentIndex(m_session, m_textureSwapChain, &currentIndex);
             auto currentFramebuffer = m_framebufferObjects[currentIndex];
 
-            unsigned int glTexture = m_renderer->render(hmdState, m_eyeRenderDesc);
+            unsigned int glTexture = m_renderer->render(hmdState, m_eyeRenderDesc, frameTimer.elapsed());
 
-            // Set currentFBO as active render target
-//            m_gl->glBindFramebuffer(GL_FRAMEBUFFER, currentFramebuffer.fbo);
             //Copy the rendered image to the Oculus Swap Texture
             m_gl->glCopyImageSubData(glTexture, GL_TEXTURE_2D, 0, 0, 0, 0,
                                      currentFramebuffer.texture, GL_TEXTURE_2D, 0, 0, 0, 0,
                                      m_outputSize.width(), m_outputSize.height(), 1);
 
+            // Set currentFBO as active render target
+//            m_gl->glBindFramebuffer(GL_FRAMEBUFFER, currentFramebuffer.fbo);
+//            m_gl->glViewport(0, 0, m_outputSize.width(), m_outputSize.height());
+//            m_gl->glClearColor(1.f, 0.f, 0.f, 1.f);
+//            m_gl->glClear(GL_COLOR_BUFFER_BIT);
+//            if (m_blitter->isCreated()) {
+//                m_blitter->bind();
+//                auto target = QOpenGLTextureBlitter::targetTransform(QRect(0, 0, m_outputSize.width(), m_outputSize.height()),
+//                                                                     QRect(0, 0, m_outputSize.width(), m_outputSize.height()));
+//                m_blitter->blit(glTexture, target, QOpenGLTextureBlitter::OriginTopLeft);
+//                m_blitter->release();
+//            }
+
             // Commit the changes to the texture swapchain
             ovr_CommitTextureSwapChain(m_session, m_textureSwapChain);
+            frameTimer.restart();
         }
 
         // Submit frame with layer we use
@@ -80,41 +98,41 @@ void RenderThread::run()
     cleanup();
 }
 
-void RenderThread::stop()
+void OculusRenderThread::stop()
 {
     setIsActive(false);
 }
 
-QOpenGLContext *RenderThread::openGLContext() const
+QOpenGLContext *OculusRenderThread::openGLContext() const
 {
     return m_glContext;
 }
 
-ovrSession RenderThread::session() const
+ovrSession OculusRenderThread::session() const
 {
     return m_session;
 }
 
-bool RenderThread::isActive() const
+bool OculusRenderThread::isActive() const
 {
     QMutexLocker locker(m_mutex);
     return m_isActive;
 }
 
-QSize RenderThread::mirrorTextureSize() const
+QSize OculusRenderThread::mirrorTextureSize() const
 {
     QMutexLocker locker(m_mutex);
     return QSize(m_mirrorTexture.description.Width,
                  m_mirrorTexture.description.Height);
 }
 
-unsigned int RenderThread::mirrorTextureId() const
+unsigned int OculusRenderThread::mirrorTextureId() const
 {
     QMutexLocker locker(m_mutex);
     return m_mirrorTexture.id;
 }
 
-void RenderThread::setIsActive(bool isActive)
+void OculusRenderThread::setIsActive(bool isActive)
 {
     QMutexLocker locker(m_mutex);
     if (m_isActive == isActive)
@@ -124,7 +142,7 @@ void RenderThread::setIsActive(bool isActive)
     emit isActiveChanged(m_isActive);
 }
 
-bool RenderThread::init()
+bool OculusRenderThread::init()
 {
     ovrResult result = ovr_Initialize(nullptr);
     if (OVR_FAILURE(result))
@@ -183,6 +201,12 @@ bool RenderThread::init()
     if (!m_gl) {
         qWarning("opengl functions could not be resolved");
         return false;
+    }
+
+    // Create texture blitter
+    m_blitter = new QOpenGLTextureBlitter;
+    if (!m_blitter->create()) {
+        qWarning("Could not create headset blitter");
     }
 
     if (ovr_CreateTextureSwapChainGL(m_session, &desc, &m_textureSwapChain) == ovrSuccess) {
@@ -312,7 +336,7 @@ bool RenderThread::init()
     return true;
 }
 
-void RenderThread::cleanup()
+void OculusRenderThread::cleanup()
 {
     m_glContext->makeCurrent(m_surface);
     ovr_DestroyMirrorTexture(m_session, m_mirrorTexture.texture);
@@ -327,6 +351,8 @@ void RenderThread::cleanup()
     }
     // cleanup renderer
     delete m_renderer;
+
+    delete m_blitter;
 
     m_glContext->doneCurrent();
     delete m_glContext;

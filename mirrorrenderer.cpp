@@ -75,7 +75,7 @@ void MirrorRenderer::render()
             targetRect.setY(m_surface->height() / 2 - targetRect.height() / 2);
         }
         auto target = QOpenGLTextureBlitter::targetTransform(targetRect, QRect(0, 0, m_surface->width(), m_surface->height()));
-        m_blitter->blit(m_mirrorTextureId, target, QOpenGLTextureBlitter::OriginBottomLeft);
+        m_blitter->blit(m_mirrorTextureId, target, QOpenGLTextureBlitter::OriginTopLeft);
         m_blitter->release();
     }
 

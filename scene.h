@@ -3,14 +3,18 @@
 
 #include <Ogre.h>
 #include <QVector>
+#include <OVR_CAPI.h>
 
 class Player;
 class Scene
 {
 public:
     Scene();
-    void init(Ogre::SceneManager *manager, Ogre::Root *root);
-    void update(unsigned int time);
+    void init(Ogre::SceneManager *manager, Ogre::Root *root, Ogre::SceneNode *headNode, Ogre::Camera *cameras[]);
+    void updatePlayer(const ovrTrackingState &trackingState, ovrEyeRenderDesc eyeRenderDesc[]);
+    void update(qint64 time);
+
+    Player *player() const;
 
 private:
     Player *m_player;

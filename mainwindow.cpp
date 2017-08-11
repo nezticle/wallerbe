@@ -1,5 +1,5 @@
 #include "mainwindow.h"
-#include "renderthread.h"
+#include "oculusrenderthread.h"
 
 #include <QtWidgets>
 #include <QOpenGLWidget>
@@ -47,11 +47,11 @@ MainWindow::MainWindow(QWidget *parent) :
     m_offscreenSurface->create();
     m_offscreenSurface->setVisible(false);
 
-    m_renderThread = new RenderThread(m_offscreenSurface, m_mirrorContext, this);
-    connect(m_renderThread, &RenderThread::finished, m_renderThread, &QObject::deleteLater);
+    m_renderThread = new OculusRenderThread(m_offscreenSurface, m_mirrorContext, this);
+    connect(m_renderThread, &OculusRenderThread::finished, m_renderThread, &QObject::deleteLater);
     m_renderThread->start();
 
-    connect(m_renderThread, &RenderThread::isActiveChanged, this, &MainWindow::setupMirroring);
+    connect(m_renderThread, &OculusRenderThread::isActiveChanged, this, &MainWindow::setupMirroring);
 }
 
 MainWindow::~MainWindow()
